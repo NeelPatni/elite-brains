@@ -151,7 +151,7 @@ dotenv.config();
 
 const app = express();
 
-// ✅ CORS configuration for your domain
+// ✅ Enable CORS only for your domains
 app.use(
   cors({
     origin: [
@@ -167,101 +167,109 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ Hostinger SMTP Transporter (TLS Port 587)
+// ✅ Email Transporter (Hostinger)
 const transporter = nodemailer.createTransport({
   host: "smtp.hostinger.com",
-  port: 587, // TLS (recommended for Render)
-  secure: false, // must be false for port 587
+  port: 465,
+  secure: true, // use true for port 465
   auth: {
-    user: process.env.EMAIL_USER, // e.g., neel@taniyaweb.site
-    pass: process.env.EMAIL_PASS, // e.g., Client@2025n
-  },
-  tls: {
-    rejectUnauthorized: false, // avoid certificate errors
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
 // ============================
-// 📅 Appointment Form Route
+// 📩 Appointment Form Route
 // ============================
 app.post("/send-appointment", async (req, res) => {
   try {
     const { name, Phone, email, service, message } = req.body;
 
+    // ✅ Field validation
     if (!name || !Phone || !email || !service || !message) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required!" });
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required!",
+      });
     }
 
+    // ✅ Email content
     const mailOptions = {
       from: `"Appointment Form" <${process.env.EMAIL_USER}>`,
       to: process.env.TO_EMAIL,
       subject: "New Appointment Form Submission",
       html: `
-        <h2>New Appointment Request</h2>
+        <h2>📅 New Appointment Request</h2>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Phone:</strong> ${Phone}</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Service:</strong> ${service}</p>
         <p><strong>Message:</strong> ${message}</p>
+        <hr>
+        <p>✅ Sent from EliteBrains Appointment Form</p>
       `,
     };
 
     await transporter.sendMail(mailOptions);
-    console.log("✅ Appointment email sent successfully!");
+    console.log("✅ Appointment email sent successfully");
     res.status(200).json({ success: true, message: "Appointment email sent successfully!" });
+
   } catch (error) {
-    console.error("❌ Appointment email error:", error);
+    console.error("❌ Appointment email error:", error.message);
     res.status(500).json({ success: false, message: "Failed to send appointment email." });
   }
 });
 
 // ============================
-// ✉️ Contact Form Route
+// 📬 Contact Form Route
 // ============================
 app.post("/send-contact", async (req, res) => {
   try {
     const { name, email, phone, subject, message } = req.body;
 
+    // ✅ Field validation
     if (!name || !email || !phone || !subject || !message) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required!" });
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required!",
+      });
     }
 
+    // ✅ Email content
     const mailOptions = {
       from: `"Contact Form" <${process.env.EMAIL_USER}>`,
       to: process.env.TO_EMAIL,
       subject: `New Contact Message: ${subject}`,
       html: `
-        <h2>New Contact Form Submission</h2>
+        <h2>📩 New Contact Form Submission</h2>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Phone:</strong> ${phone}</p>
         <p><strong>Subject:</strong> ${subject}</p>
-        <p><strong>Message:</strong><br>${message}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+        <hr>
+        <p>✅ Sent from EliteBrains Contact Form</p>
       `,
     };
 
     await transporter.sendMail(mailOptions);
-    console.log("✅ Contact email sent successfully!");
+    console.log("✅ Contact email sent successfully");
     res.status(200).json({ success: true, message: "Contact email sent successfully!" });
+
   } catch (error) {
-    console.error("❌ Contact email error:", error);
+    console.error("❌ Contact email error:", error.message);
     res.status(500).json({ success: false, message: "Failed to send contact email." });
   }
 });
 
 // ============================
-// 🏠 Root Route
+// 🌐 Root Route
 // ============================
 app.get("/", (req, res) => {
-  res.send("✅ Email API (Appointment + Contact) is running successfully!");
+  res.send("✅ EliteBrains Email API (Appointment + Contact) is running successfully!");
 });
 
-// ============================
-// 🚀 Start Server
-// ============================
+// ✅ Server Start
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
