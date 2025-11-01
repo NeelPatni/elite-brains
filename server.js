@@ -6,13 +6,13 @@ import dotenv from "dotenv";
 dotenv.config();
 const app = express();
 
-// ✅ CORS setup (frontend allowed)
+// ✅ CORS setup
 app.use(
   cors({
     origin: [
       "https://elitebrains.co.in",
       "https://www.elitebrains.co.in",
-      "https://elite-brains.onrender.com", // allow backend to call itself
+      "https://elite-brains.onrender.com",
     ],
     methods: ["GET", "POST"],
     credentials: true,
@@ -23,21 +23,24 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Configure Nodemailer transporter (Hostinger SMTP)
+// ✅ Configure Nodemailer transporter (Render-safe + Hostinger SMTP)
 const transporter = nodemailer.createTransport({
   host: "smtp.hostinger.com",
-  port: 465,
-  secure: true,
+  port: 587, // ✅ Render blocks 465; 587 works with STARTTLS
+  secure: false, // STARTTLS (not SSL)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false, // avoids SSL verification issues
+  },
 });
 
-// ✅ Verify SMTP connection at startup
+// ✅ Verify SMTP connection
 transporter.verify((error, success) => {
   if (error) {
-    console.error("❌ SMTP connection failed:", error);
+    console.error("❌ SMTP connection failed:", error.message);
   } else {
     console.log("✅ SMTP server ready to send emails!");
   }
@@ -53,14 +56,15 @@ app.post("/send-appointment", async (req, res) => {
   console.log("📨 Appointment request received:", req.body);
 
   if (!name || !finalPhone || !email || !service || !message) {
-    return res
-      .status(400)
-      .json({ success: false, message: "All fields are required!" });
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required!",
+    });
   }
 
   const mailOptions = {
     from: `"EliteBrains Appointment" <${process.env.EMAIL_USER}>`,
-    to: process.env.TO_EMAIL,
+    to: process.env.TO_EMAIL || process.env.EMAIL_USER,
     subject: `New Appointment from ${name}`,
     html: `
       <h2>New Appointment Request</h2>
@@ -80,11 +84,10 @@ app.post("/send-appointment", async (req, res) => {
       message: "Appointment email sent successfully!",
     });
   } catch (error) {
-    console.error("❌ Appointment email error:", error);
+    console.error("❌ Appointment email error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to send appointment email.",
-      error: error.message,
     });
   }
 });
@@ -93,30 +96,29 @@ app.post("/send-appointment", async (req, res) => {
 // 📬 Contact Form Route
 // ================================
 app.post("/send-contact", async (req, res) => {
-  const name = req.body.name;
-  const email = req.body.email;
-  const phone = req.body.phone || req.body.Phone;
-  const subject = req.body.subject || req.body.Subject;
-  const message = req.body.message;
+  const { name, email, phone, Phone, subject, Subject, message } = req.body;
+  const finalPhone = phone || Phone;
+  const finalSubject = subject || Subject;
 
   console.log("📨 Contact request received:", req.body);
 
-  if (!name || !email || !phone || !subject || !message) {
-    return res
-      .status(400)
-      .json({ success: false, message: "All fields are required!" });
+  if (!name || !email || !finalPhone || !finalSubject || !message) {
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required!",
+    });
   }
 
   const mailOptions = {
     from: `"EliteBrains Contact" <${process.env.EMAIL_USER}>`,
-    to: process.env.TO_EMAIL,
-    subject: `New Contact Message: ${subject}`,
+    to: process.env.TO_EMAIL || process.env.EMAIL_USER,
+    subject: `New Contact Message: ${finalSubject}`,
     html: `
       <h2>New Contact Form Submission</h2>
       <p><strong>Name:</strong> ${name}</p>
       <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Phone:</strong> ${phone}</p>
-      <p><strong>Subject:</strong> ${subject}</p>
+      <p><strong>Phone:</strong> ${finalPhone}</p>
+      <p><strong>Subject:</strong> ${finalSubject}</p>
       <p><strong>Message:</strong><br>${message}</p>
     `,
   };
@@ -129,11 +131,10 @@ app.post("/send-contact", async (req, res) => {
       message: "Contact email sent successfully!",
     });
   } catch (error) {
-    console.error("❌ Contact email error:", error);
+    console.error("❌ Contact email error:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to send contact email.",
-      error: error.message,
     });
   }
 });
@@ -142,7 +143,7 @@ app.post("/send-contact", async (req, res) => {
 // ✅ Root Route
 // ================================
 app.get("/", (req, res) => {
-  res.send("✅ EliteBrains Email API is running perfectly.");
+  res.send("✅ EliteBrains Email API is running perfectly on Render.");
 });
 
 // ================================
